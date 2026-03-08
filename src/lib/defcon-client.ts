@@ -29,9 +29,13 @@ export interface EntityRefs {
 }
 
 export interface EntityHistory {
-  state: string;
-  enteredAt: string;
-  exitedAt?: string;
+  id: string;
+  entityId: string;
+  fromState: string;
+  toState: string;
+  trigger: string;
+  invocationId?: string;
+  timestamp: string;
 }
 
 export interface Entity {
