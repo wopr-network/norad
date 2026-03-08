@@ -95,7 +95,7 @@ function ActivityRow({ item }: { item: ActivityItem }) {
           className="text-xs ml-[4.25rem] p-2 rounded overflow-x-auto"
           style={{
             color: "var(--foreground)",
-            background: "var(--muted, rgba(255,255,255,0.05))",
+            background: "var(--muted)",
             whiteSpace: "pre-wrap",
             wordBreak: "break-word",
           }}

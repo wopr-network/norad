@@ -11,6 +11,11 @@ export async function GET(req: NextRequest, { params }: { params: { path: string
       next: { revalidate: 0 },
     });
 
+    const contentType = res.headers.get("content-type") ?? "";
+    if (!contentType.includes("application/json")) {
+      return NextResponse.json({ error: "upstream unavailable" }, { status: 502 });
+    }
+
     const body = await res.json();
     return NextResponse.json(body, { status: res.status });
   } catch {
