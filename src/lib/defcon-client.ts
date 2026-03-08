@@ -81,9 +81,9 @@ export async function getFlows(): Promise<Flow[]> {
   return fetchJson<Flow[]>("/api/flows");
 }
 
-export async function getEntitiesByState(flowId: string, state: string): Promise<Entity[]> {
+export async function getEntitiesByState(flowName: string, state: string): Promise<Entity[]> {
   return fetchJson<Entity[]>(
-    `/api/entities?flow=${encodeURIComponent(flowId)}&state=${encodeURIComponent(state)}`,
+    `/api/entities?flow=${encodeURIComponent(flowName)}&state=${encodeURIComponent(state)}`,
   );
 }
 
