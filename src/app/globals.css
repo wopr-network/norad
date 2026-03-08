@@ -52,7 +52,7 @@ body::before {
     rgba(0, 255, 136, 0.012) 4px
   );
   pointer-events: none;
-  z-index: 9999;
+  z-index: 1;
 }
 
 ::-webkit-scrollbar {

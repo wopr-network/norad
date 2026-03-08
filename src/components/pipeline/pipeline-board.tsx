@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Spinner } from "@/components/ui/spinner";
 import type { Entity, Flow } from "@/lib/defcon-client";
-import type { DefconEvent } from "@/lib/defcon-ws";
+import type { DefconConnectionStatus, DefconEvent } from "@/lib/defcon-ws";
+// DefconConnectionStatus used in handleWsStatus param type
 import { useDefconEvents } from "@/lib/defcon-ws";
 import { StateColumn } from "./state-column";
 
@@ -19,7 +20,9 @@ interface PipelineBoardProps {
 
 export function PipelineBoard({ initial }: PipelineBoardProps) {
   const [board, setBoard] = useState<BoardState>(initial);
-  const [wsStatus, setWsStatus] = useState<"connecting" | "live" | "error">("connecting");
+  const [wsStatus, setWsStatus] = useState<"connecting" | "live" | "error" | "closed">(
+    "connecting",
+  );
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   const refreshEntities = useCallback(async () => {
@@ -54,7 +57,6 @@ export function PipelineBoard({ initial }: PipelineBoardProps) {
 
   const handleWsEvent = useCallback(
     (event: DefconEvent) => {
-      setWsStatus("live");
       if (
         event.type === "entity.transitioned" ||
         event.type === "entity.created" ||
@@ -66,13 +68,14 @@ export function PipelineBoard({ initial }: PipelineBoardProps) {
     [refreshEntities],
   );
 
-  useDefconEvents(handleWsEvent);
-
-  // Mark WS as live after 2s if no error
-  useEffect(() => {
-    const t = setTimeout(() => setWsStatus("live"), 2000);
-    return () => clearTimeout(t);
+  const handleWsStatus = useCallback((status: DefconConnectionStatus) => {
+    if (status === "open") setWsStatus("live");
+    else if (status === "error") setWsStatus("error");
+    else if (status === "closed") setWsStatus("closed");
+    else setWsStatus("connecting");
   }, []);
+
+  useDefconEvents(handleWsEvent, handleWsStatus);
 
   const flows = board.flows;
 

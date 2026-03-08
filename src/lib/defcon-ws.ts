@@ -21,9 +21,16 @@ function getWsUrl(): string {
   return `${DEFCON_URL.replace(/^http/, "ws")}/ws`;
 }
 
-export function useDefconEvents(handler: (event: DefconEvent) => void): void {
+export type DefconConnectionStatus = "connecting" | "open" | "closed" | "error";
+
+export function useDefconEvents(
+  handler: (event: DefconEvent) => void,
+  onStatusChange?: (status: DefconConnectionStatus) => void,
+): void {
   const handlerRef = useRef(handler);
   handlerRef.current = handler;
+  const statusHandlerRef = useRef(onStatusChange);
+  statusHandlerRef.current = onStatusChange;
 
   useEffect(() => {
     let ws: WebSocket | null = null;
@@ -34,15 +41,16 @@ export function useDefconEvents(handler: (event: DefconEvent) => void): void {
       if (destroyed) return;
       const url = getWsUrl();
       log.info("connecting to", url);
+      statusHandlerRef.current?.("connecting");
       ws = new WebSocket(url);
 
-      if (DEFCON_ADMIN_TOKEN) {
-        // Send auth after open (protocol-level auth)
-        ws.addEventListener("open", () => {
+      ws.addEventListener("open", () => {
+        if (DEFCON_ADMIN_TOKEN) {
           ws?.send(JSON.stringify({ type: "auth", token: DEFCON_ADMIN_TOKEN }));
-          log.info("ws connected");
-        });
-      }
+        }
+        log.info("ws connected");
+        statusHandlerRef.current?.("open");
+      });
 
       ws.addEventListener("message", (ev) => {
         try {
@@ -54,6 +62,7 @@ export function useDefconEvents(handler: (event: DefconEvent) => void): void {
       });
 
       ws.addEventListener("close", () => {
+        statusHandlerRef.current?.("closed");
         if (!destroyed) {
           log.warn("ws closed, reconnecting in 5s");
           reconnectTimer = setTimeout(connect, 5000);
@@ -62,6 +71,7 @@ export function useDefconEvents(handler: (event: DefconEvent) => void): void {
 
       ws.addEventListener("error", () => {
         log.error("ws error");
+        statusHandlerRef.current?.("error");
         ws?.close();
       });
     }

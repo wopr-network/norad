@@ -1,12 +1,7 @@
+import { GeistMono } from "geist/font/mono";
 import type { Metadata } from "next";
-import { Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/ui/nav";
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "NORAD — Command Center",
@@ -20,7 +15,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistMono.variable} antialiased min-h-screen`}>
+      <body className={`${GeistMono.variable} antialiased min-h-screen`}>
         <Nav />
         <main>{children}</main>
       </body>
