@@ -19,7 +19,7 @@ interface EntityCardProps {
 
 export function EntityCard({ entity, state }: EntityCardProps) {
   const linear = entity.refs?.linear;
-  const enteredAt = entity.history?.findLast((h) => h.state === entity.state)?.enteredAt;
+  const enteredAt = entity.history?.findLast((h) => h.toState === entity.state)?.timestamp;
 
   return (
     <Link href={`/entity/${encodeURIComponent(entity.id)}`} className="block group">

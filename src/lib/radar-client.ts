@@ -35,8 +35,16 @@ export interface SlotPool {
   capacity: number;
 }
 
+function resolveUrl(path: string): string {
+  if (typeof window === "undefined") {
+    return `${RADAR_URL}${path}`;
+  }
+  // Browser: proxy through Next.js API route to avoid cross-origin issues
+  return path.replace(/^\/api\//, "/api/radar/");
+}
+
 async function fetchJson<T>(path: string): Promise<T> {
-  const url = `${RADAR_URL}${path}`;
+  const url = resolveUrl(path);
   const res = await fetch(url, { next: { revalidate: 0 } });
   if (!res.ok) {
     log.error(`GET ${url} → ${res.status}`);
