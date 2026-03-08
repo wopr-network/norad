@@ -8,7 +8,8 @@
     "start": "next start",
     "check": "biome check src/ && tsc --noEmit",
     "lint": "biome check src/",
-    "format": "biome format --write src/"
+    "format": "biome format --write src/",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "geist": "^1.7.0",
@@ -18,6 +19,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.6",
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
