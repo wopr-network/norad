@@ -61,30 +61,40 @@ interface ActivityFeedProps {
 export function ActivityFeed({ entityId, entityState }: ActivityFeedProps) {
   const [items, setItems] = useState<ActivityItem[]>([]);
   const nextSeqRef = useRef(0);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelledRef = useRef(false);
+
+  const scheduleNext = useCallback((poll: () => Promise<void>) => {
+    timerRef.current = setTimeout(poll, POLL_INTERVAL_MS);
+  }, []);
 
   const poll = useCallback(async () => {
+    if (cancelledRef.current) return;
     try {
       const page = await getEntityActivity(entityId, nextSeqRef.current);
+      // Always advance cursor — even on empty pages
+      nextSeqRef.current = page.nextSeq;
       if (page.items.length > 0) {
         setItems((prev) => [...prev, ...page.items]);
-        nextSeqRef.current = page.nextSeq;
       }
     } catch {
       // ignore transient errors — keep polling
     }
-  }, [entityId]);
+    if (!cancelledRef.current && !TERMINAL_STATES.has(entityState)) {
+      scheduleNext(poll);
+    }
+  }, [entityId, entityState, scheduleNext]);
 
   useEffect(() => {
+    cancelledRef.current = false;
+    nextSeqRef.current = 0;
+    setItems([]);
     poll();
-
-    if (TERMINAL_STATES.has(entityState)) return;
-
-    intervalRef.current = setInterval(poll, POLL_INTERVAL_MS);
     return () => {
-      if (intervalRef.current !== null) clearInterval(intervalRef.current);
+      cancelledRef.current = true;
+      if (timerRef.current !== null) clearTimeout(timerRef.current);
     };
-  }, [poll, entityState]);
+  }, [poll]);
 
   if (items.length === 0) {
     return (
