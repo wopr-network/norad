@@ -75,10 +75,16 @@ function ActivityRow({ item }: { item: ActivityItem }) {
           style={{ color: "var(--muted-foreground)", wordBreak: "break-word" }}
           onClick={hasDetail ? () => setExpanded((e) => !e) : undefined}
           disabled={!hasDetail}
+          aria-disabled={!hasDetail}
+          aria-expanded={hasDetail ? expanded : undefined}
         >
           {summary}
           {hasDetail && (
-            <span className="ml-1.5 text-xs" style={{ color: "var(--accent-blue)" }}>
+            <span
+              className="ml-1.5 text-xs"
+              style={{ color: "var(--accent-blue)" }}
+              aria-hidden="true"
+            >
               {expanded ? "▲" : "▼"}
             </span>
           )}
@@ -109,9 +115,20 @@ interface ActivityFeedProps {
 export function ActivityFeed({ entityId, entityState }: ActivityFeedProps) {
   const [items, setItems] = useState<ActivityItem[]>([]);
   const [autoScroll, setAutoScroll] = useState(true);
+  const autoScrollRef = useRef(true);
   const nextSeqRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Keep ref in sync so polling closure always sees latest value without being a dep
+  autoScrollRef.current = autoScroll;
+
+  // Scroll to bottom after React commits new items
+  useEffect(() => {
+    if (autoScrollRef.current && items.length > 0) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [items]);
 
   useEffect(() => {
     let cancelled = false;
@@ -126,7 +143,6 @@ export function ActivityFeed({ entityId, entityState }: ActivityFeedProps) {
           nextSeqRef.current = page.nextSeq;
           if (page.items.length > 0) {
             setItems((prev) => [...prev, ...page.items]);
-            if (autoScroll) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
           }
           if (!TERMINAL_STATES.has(entityState)) {
             timerRef.current = setTimeout(run, POLL_INTERVAL_MS);
@@ -144,7 +160,7 @@ export function ActivityFeed({ entityId, entityState }: ActivityFeedProps) {
       cancelled = true;
       if (timerRef.current !== null) clearTimeout(timerRef.current);
     };
-  }, [entityId, entityState, autoScroll]);
+  }, [entityId, entityState]);
 
   if (items.length === 0) {
     return (
@@ -162,6 +178,9 @@ export function ActivityFeed({ entityId, entityState }: ActivityFeedProps) {
         </span>
         <button
           type="button"
+          role="switch"
+          aria-checked={autoScroll}
+          aria-label="Auto-scroll"
           onClick={() => setAutoScroll((v) => !v)}
           className="relative inline-flex h-4 w-7 items-center rounded-full transition-colors"
           style={{ background: autoScroll ? "var(--accent-green)" : "var(--border)" }}
