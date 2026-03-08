@@ -49,7 +49,7 @@ export function useDefconEvents(
         statusHandlerRef.current?.("closed");
         return;
       }
-      log.info("connecting to", url);
+      log.info("connecting to", DEFCON_WS_URL || "(not set)");
       statusHandlerRef.current?.("connecting");
       ws = new WebSocket(url);
 

@@ -4,6 +4,7 @@ import { ArtifactsPanel } from "@/components/entity/artifacts-panel";
 import { EntityTimeline } from "@/components/entity/entity-timeline";
 import { Badge, stateVariant } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { GITHUB_BASE_URL, LINEAR_BASE_URL } from "@/lib/config";
 import { getEntity } from "@/lib/defcon-client";
 
 export const dynamic = "force-dynamic";
@@ -55,7 +56,7 @@ export default async function EntityPage({ params }: EntityPageProps) {
           </Badge>
           {github?.repo && (
             <a
-              href={`https://github.com/${github.repo}`}
+              href={`${GITHUB_BASE_URL}${github.repo}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs hover:opacity-80 transition-opacity"
@@ -66,7 +67,7 @@ export default async function EntityPage({ params }: EntityPageProps) {
           )}
           {linear && (
             <a
-              href={`https://linear.app/issue/${linear.key}`}
+              href={`${LINEAR_BASE_URL}${linear.key}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs hover:opacity-80 transition-opacity"

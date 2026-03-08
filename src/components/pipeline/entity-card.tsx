@@ -22,7 +22,7 @@ export function EntityCard({ entity, state }: EntityCardProps) {
   const enteredAt = entity.history?.findLast((h) => h.state === entity.state)?.enteredAt;
 
   return (
-    <Link href={`/entity/${entity.id}`} className="block group">
+    <Link href={`/entity/${encodeURIComponent(entity.id)}`} className="block group">
       <div
         className="rounded border p-3 transition-colors"
         style={{

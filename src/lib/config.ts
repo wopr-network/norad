@@ -5,3 +5,5 @@ export const RADAR_URL = process.env.RADAR_URL ?? "http://localhost:8080";
 export const DEFCON_WS_URL = process.env.NEXT_PUBLIC_DEFCON_WS_URL ?? "";
 // Browser-side WS token — separate from server-side DEFCON_ADMIN_TOKEN
 export const DEFCON_WS_TOKEN = process.env.NEXT_PUBLIC_DEFCON_WS_TOKEN ?? "";
+export const GITHUB_BASE_URL = "https://github.com/";
+export const LINEAR_BASE_URL = "https://linear.app/wopr/issue/";

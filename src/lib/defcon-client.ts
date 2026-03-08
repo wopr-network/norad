@@ -71,19 +71,29 @@ function resolveUrl(path: string): string {
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   const url = resolveUrl(path);
   const isServerSide = typeof window === "undefined";
-  const res = await fetch(url, {
-    ...init,
-    headers: {
-      ...(isServerSide ? authHeaders() : {}),
-      ...(init?.headers ?? {}),
-    },
-    next: { revalidate: 0 },
-  });
-  if (!res.ok) {
-    log.error(`GET ${url} → ${res.status}`);
-    throw new Error(`DEFCON ${res.status}: ${path}`);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const res = await fetch(url, {
+      ...init,
+      signal: init?.signal ?? controller.signal,
+      headers: {
+        ...(isServerSide ? authHeaders() : {}),
+        ...(init?.headers ?? {}),
+      },
+      next: { revalidate: 0 },
+    });
+    if (!res.ok) {
+      log.error(`GET ${url} → ${res.status}`);
+      throw new Error(`DEFCON ${res.status}: ${path}`);
+    }
+    return res.json() as Promise<T>;
+  } catch (error) {
+    log.error(`GET ${url} failed`, error);
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
-  return res.json() as Promise<T>;
 }
 
 export async function getDefconStatus(): Promise<DefconStatus> {
