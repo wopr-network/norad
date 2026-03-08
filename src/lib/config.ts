@@ -3,3 +3,5 @@ export const DEFCON_ADMIN_TOKEN = process.env.DEFCON_ADMIN_TOKEN ?? "";
 export const RADAR_URL = process.env.RADAR_URL ?? "http://localhost:8080";
 // Browser-side WebSocket URL — must be set to the publicly reachable DEFCON WS endpoint
 export const DEFCON_WS_URL = process.env.NEXT_PUBLIC_DEFCON_WS_URL ?? "";
+// Browser-side WS token — separate from server-side DEFCON_ADMIN_TOKEN
+export const DEFCON_WS_TOKEN = process.env.NEXT_PUBLIC_DEFCON_WS_TOKEN ?? "";
