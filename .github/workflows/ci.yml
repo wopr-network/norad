@@ -1,21 +1,41 @@
 name: CI
+
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  merge_group:
+    types: [checks_requested]
+
 jobs:
-  ci:
-    runs-on: self-hosted
+  build-lint-test:
+    runs-on: [self-hosted, Linux, X64]
+    permissions:
+      pull-requests: write
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: pnpm/action-setup@v4
         with:
           version: 9
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 20
           cache: pnpm
+
       - run: pnpm install --frozen-lockfile
-      - run: pnpm check
-      - run: pnpm build
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: pnpm run build
+        env:
+          DEFCON_URL: http://localhost:3001
+          RADAR_URL: http://localhost:8080
