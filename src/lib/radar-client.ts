@@ -56,3 +56,22 @@ export async function getWorkers(): Promise<Worker[]> {
 export async function getEvents(limit = 50, offset = 0): Promise<EventLog[]> {
   return fetchJson<EventLog[]>(`/api/events?limit=${limit}&offset=${offset}`);
 }
+
+export interface ActivityItem {
+  id: string;
+  entityId: string;
+  slotId: string;
+  seq: number;
+  type: "start" | "tool_use" | "text" | "result";
+  data: Record<string, unknown>;
+  createdAt: number;
+}
+
+export interface ActivityPage {
+  items: ActivityItem[];
+  nextSeq: number;
+}
+
+export async function getEntityActivity(entityId: string, since = 0): Promise<ActivityPage> {
+  return fetchJson<ActivityPage>(`/api/entities/${entityId}/activity?since=${since}`);
+}

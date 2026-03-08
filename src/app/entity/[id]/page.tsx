@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ActivityFeed } from "@/components/entity/activity-feed";
 import { ArtifactsPanel } from "@/components/entity/artifacts-panel";
 import { EntityTimeline } from "@/components/entity/entity-timeline";
 import { Badge, stateVariant } from "@/components/ui/badge";
@@ -131,6 +132,17 @@ export default async function EntityPage({ params }: EntityPageProps) {
           </Card>
         </div>
       </div>
+
+      {/* Activity Feed */}
+      <Card className="p-4 mt-6">
+        <h2
+          className="text-xs font-bold tracking-widest uppercase mb-4"
+          style={{ color: "var(--muted-foreground)" }}
+        >
+          Agent Activity
+        </h2>
+        <ActivityFeed entityId={entity.id} entityState={entity.state} />
+      </Card>
     </div>
   );
 }
