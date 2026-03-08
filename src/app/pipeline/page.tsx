@@ -16,7 +16,7 @@ export default async function PipelinePage() {
         flow.states.map(async (state) => {
           const key = `${flow.id}::${state.name}`;
           try {
-            entityMap[key] = await getEntitiesByState(flow.id, state.name);
+            entityMap[key] = await getEntitiesByState(flow.name, state.name);
           } catch {
             entityMap[key] = [];
           }

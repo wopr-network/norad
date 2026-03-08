@@ -35,7 +35,7 @@ export function PipelineBoard({ initial }: PipelineBoardProps) {
           flow.states.map(async (state) => {
             const key = `${flow.id}::${state.name}`;
             try {
-              entityMap[key] = await getEntitiesByState(flow.id, state.name);
+              entityMap[key] = await getEntitiesByState(flow.name, state.name);
             } catch {
               entityMap[key] = [];
             }
@@ -94,12 +94,18 @@ export function PipelineBoard({ initial }: PipelineBoardProps) {
                 background:
                   wsStatus === "live"
                     ? "var(--accent-green)"
-                    : wsStatus === "error"
+                    : wsStatus === "error" || wsStatus === "closed"
                       ? "var(--accent-red)"
                       : "var(--accent-amber)",
               }}
             />
-            {wsStatus === "live" ? "LIVE" : wsStatus === "error" ? "DISCONNECTED" : "CONNECTING"}
+            {wsStatus === "live"
+              ? "LIVE"
+              : wsStatus === "error"
+                ? "DISCONNECTED"
+                : wsStatus === "closed"
+                  ? "OFFLINE"
+                  : "CONNECTING"}
           </span>
           <span>refreshed {lastRefresh.toLocaleTimeString()}</span>
         </div>

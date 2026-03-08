@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { DEFCON_ADMIN_TOKEN, DEFCON_URL } from "./config";
+import { DEFCON_WS_TOKEN, DEFCON_WS_URL } from "./config";
 import { logger } from "./logger";
 
 const log = logger("defcon-ws");
@@ -18,7 +18,11 @@ export interface DefconEvent {
 }
 
 function getWsUrl(): string {
-  return `${DEFCON_URL.replace(/^http/, "ws")}/ws`;
+  if (!DEFCON_WS_URL) return "";
+  if (DEFCON_WS_TOKEN) {
+    return `${DEFCON_WS_URL}?token=${encodeURIComponent(DEFCON_WS_TOKEN)}`;
+  }
+  return DEFCON_WS_URL;
 }
 
 export type DefconConnectionStatus = "connecting" | "open" | "closed" | "error";
@@ -40,14 +44,16 @@ export function useDefconEvents(
     function connect() {
       if (destroyed) return;
       const url = getWsUrl();
-      log.info("connecting to", url);
+      if (!url) {
+        log.warn("NEXT_PUBLIC_DEFCON_WS_URL not set — WebSocket disabled");
+        statusHandlerRef.current?.("closed");
+        return;
+      }
+      log.info("connecting to", DEFCON_WS_URL || "(not set)");
       statusHandlerRef.current?.("connecting");
       ws = new WebSocket(url);
 
       ws.addEventListener("open", () => {
-        if (DEFCON_ADMIN_TOKEN) {
-          ws?.send(JSON.stringify({ type: "auth", token: DEFCON_ADMIN_TOKEN }));
-        }
         log.info("ws connected");
         statusHandlerRef.current?.("open");
       });

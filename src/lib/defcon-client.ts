@@ -59,18 +59,41 @@ function authHeaders(): Record<string, string> {
   return headers;
 }
 
-async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const url = `${DEFCON_URL}${path}`;
-  const res = await fetch(url, {
-    ...init,
-    headers: { ...authHeaders(), ...(init?.headers ?? {}) },
-    next: { revalidate: 0 },
-  });
-  if (!res.ok) {
-    log.error(`GET ${url} → ${res.status}`);
-    throw new Error(`DEFCON ${res.status}: ${path}`);
+function resolveUrl(path: string): string {
+  // Server-side: call DEFCON directly. Browser-side: proxy through Next.js API route.
+  if (typeof window === "undefined") {
+    return `${DEFCON_URL}${path}`;
   }
-  return res.json() as Promise<T>;
+  // path is like /api/status or /api/entities?... — strip /api/ prefix for proxy route
+  return path.replace(/^\/api\//, "/api/defcon/");
+}
+
+async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const url = resolveUrl(path);
+  const isServerSide = typeof window === "undefined";
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const res = await fetch(url, {
+      ...init,
+      signal: init?.signal ?? controller.signal,
+      headers: {
+        ...(isServerSide ? authHeaders() : {}),
+        ...(init?.headers ?? {}),
+      },
+      next: { revalidate: 0 },
+    });
+    if (!res.ok) {
+      log.error(`GET ${url} → ${res.status}`);
+      throw new Error(`DEFCON ${res.status}: ${path}`);
+    }
+    return res.json() as Promise<T>;
+  } catch (error) {
+    log.error(`GET ${url} failed`, error);
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 export async function getDefconStatus(): Promise<DefconStatus> {
@@ -81,9 +104,9 @@ export async function getFlows(): Promise<Flow[]> {
   return fetchJson<Flow[]>("/api/flows");
 }
 
-export async function getEntitiesByState(flowId: string, state: string): Promise<Entity[]> {
+export async function getEntitiesByState(flowName: string, state: string): Promise<Entity[]> {
   return fetchJson<Entity[]>(
-    `/api/entities?flow=${encodeURIComponent(flowId)}&state=${encodeURIComponent(state)}`,
+    `/api/entities?flow=${encodeURIComponent(flowName)}&state=${encodeURIComponent(state)}`,
   );
 }
 
