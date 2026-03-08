@@ -1,10 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { RADAR_URL } from "@/lib/config";
 
-export async function GET(req: NextRequest, { params }: { params: { path: string[] } }) {
-  const { path } = params;
+export async function GET(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+  const { path } = await params;
   const search = req.nextUrl.search;
-  const url = `${RADAR_URL}/api/${path.join("/")}${search}`;
+  const url = `${RADAR_URL}/api/${path.map(encodeURIComponent).join("/")}${search}`;
 
   try {
     const res = await fetch(url, {
