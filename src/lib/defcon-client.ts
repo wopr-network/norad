@@ -59,11 +59,24 @@ function authHeaders(): Record<string, string> {
   return headers;
 }
 
+function resolveUrl(path: string): string {
+  // Server-side: call DEFCON directly. Browser-side: proxy through Next.js API route.
+  if (typeof window === "undefined") {
+    return `${DEFCON_URL}${path}`;
+  }
+  // path is like /api/status or /api/entities?... — strip /api/ prefix for proxy route
+  return path.replace(/^\/api\//, "/api/defcon/");
+}
+
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const url = `${DEFCON_URL}${path}`;
+  const url = resolveUrl(path);
+  const isServerSide = typeof window === "undefined";
   const res = await fetch(url, {
     ...init,
-    headers: { ...authHeaders(), ...(init?.headers ?? {}) },
+    headers: {
+      ...(isServerSide ? authHeaders() : {}),
+      ...(init?.headers ?? {}),
+    },
     next: { revalidate: 0 },
   });
   if (!res.ok) {
