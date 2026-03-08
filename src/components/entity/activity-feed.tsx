@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ActivityItem } from "@/lib/radar-client";
 import { getEntityActivity } from "@/lib/radar-client";
 
@@ -62,41 +62,38 @@ export function ActivityFeed({ entityId, entityState }: ActivityFeedProps) {
   const [items, setItems] = useState<ActivityItem[]>([]);
   const nextSeqRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const cancelledRef = useRef(false);
-
-  const scheduleNext = useCallback((poll: () => Promise<void>) => {
-    timerRef.current = setTimeout(poll, POLL_INTERVAL_MS);
-  }, []);
-
-  const poll = useCallback(async () => {
-    if (cancelledRef.current) return;
-    try {
-      const page = await getEntityActivity(entityId, nextSeqRef.current);
-      // Check again — component may have unmounted while fetch was in flight
-      if (cancelledRef.current) return;
-      // Always advance cursor — even on empty pages
-      nextSeqRef.current = page.nextSeq;
-      if (page.items.length > 0) {
-        setItems((prev) => [...prev, ...page.items]);
-      }
-    } catch {
-      // ignore transient errors — keep polling
-    }
-    if (!cancelledRef.current && !TERMINAL_STATES.has(entityState)) {
-      scheduleNext(poll);
-    }
-  }, [entityId, entityState, scheduleNext]);
 
   useEffect(() => {
-    cancelledRef.current = false;
+    let cancelled = false;
     nextSeqRef.current = 0;
     setItems([]);
-    poll();
+
+    const run = async () => {
+      if (cancelled) return;
+      try {
+        const page = await getEntityActivity(entityId, nextSeqRef.current);
+        if (!cancelled) {
+          nextSeqRef.current = page.nextSeq;
+          if (page.items.length > 0) {
+            setItems((prev) => [...prev, ...page.items]);
+          }
+          if (!TERMINAL_STATES.has(entityState)) {
+            timerRef.current = setTimeout(run, POLL_INTERVAL_MS);
+          }
+        }
+      } catch {
+        if (!cancelled && !TERMINAL_STATES.has(entityState)) {
+          timerRef.current = setTimeout(run, POLL_INTERVAL_MS);
+        }
+      }
+    };
+
+    run();
     return () => {
-      cancelledRef.current = true;
+      cancelled = true;
       if (timerRef.current !== null) clearTimeout(timerRef.current);
     };
-  }, [poll]);
+  }, [entityId, entityState]);
 
   if (items.length === 0) {
     return (
