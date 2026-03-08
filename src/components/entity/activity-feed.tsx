@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ActivityItem } from "@/lib/radar-client";
 import { getEntityActivity } from "@/lib/radar-client";
 
@@ -61,30 +61,39 @@ interface ActivityFeedProps {
 export function ActivityFeed({ entityId, entityState }: ActivityFeedProps) {
   const [items, setItems] = useState<ActivityItem[]>([]);
   const nextSeqRef = useRef(0);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const poll = useCallback(async () => {
-    try {
-      const page = await getEntityActivity(entityId, nextSeqRef.current);
-      if (page.items.length > 0) {
-        setItems((prev) => [...prev, ...page.items]);
-        nextSeqRef.current = page.nextSeq;
-      }
-    } catch {
-      // ignore transient errors — keep polling
-    }
-  }, [entityId]);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    poll();
+    let cancelled = false;
+    nextSeqRef.current = 0;
+    setItems([]);
 
-    if (TERMINAL_STATES.has(entityState)) return;
-
-    intervalRef.current = setInterval(poll, POLL_INTERVAL_MS);
-    return () => {
-      if (intervalRef.current !== null) clearInterval(intervalRef.current);
+    const run = async () => {
+      if (cancelled) return;
+      try {
+        const page = await getEntityActivity(entityId, nextSeqRef.current);
+        if (!cancelled) {
+          nextSeqRef.current = page.nextSeq;
+          if (page.items.length > 0) {
+            setItems((prev) => [...prev, ...page.items]);
+          }
+          if (!TERMINAL_STATES.has(entityState)) {
+            timerRef.current = setTimeout(run, POLL_INTERVAL_MS);
+          }
+        }
+      } catch {
+        if (!cancelled && !TERMINAL_STATES.has(entityState)) {
+          timerRef.current = setTimeout(run, POLL_INTERVAL_MS);
+        }
+      }
     };
-  }, [poll, entityState]);
+
+    run();
+    return () => {
+      cancelled = true;
+      if (timerRef.current !== null) clearTimeout(timerRef.current);
+    };
+  }, [entityId, entityState]);
 
   if (items.length === 0) {
     return (
