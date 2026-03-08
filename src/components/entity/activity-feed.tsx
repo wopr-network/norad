@@ -72,6 +72,8 @@ export function ActivityFeed({ entityId, entityState }: ActivityFeedProps) {
     if (cancelledRef.current) return;
     try {
       const page = await getEntityActivity(entityId, nextSeqRef.current);
+      // Check again — component may have unmounted while fetch was in flight
+      if (cancelledRef.current) return;
       // Always advance cursor — even on empty pages
       nextSeqRef.current = page.nextSeq;
       if (page.items.length > 0) {
