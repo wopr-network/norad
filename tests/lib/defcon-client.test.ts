@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/config", () => ({
-	DEFCON_URL: process.env.DEFCON_URL ?? "http://localhost:3001",
+	DEFCON_URL: process.env.DEFCON_URL ?? "http://test-defcon",
 	DEFCON_ADMIN_TOKEN: "test-token",
 }));
 
@@ -23,7 +23,7 @@ describe("createEntity", () => {
 		expect(result).toEqual(mockEntity);
 
 		const [url, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-		expect(url).toBe("http://localhost:3001/api/entities");
+		expect(url).toBe("http://test-defcon/api/entities");
 		expect(opts.method).toBe("POST");
 		expect(JSON.parse(opts.body)).toEqual({
 			flow: "my-flow",
@@ -59,7 +59,7 @@ describe("reportSignal", () => {
 		});
 
 		const [url, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-		expect(url).toBe("http://localhost:3001/api/entities/e1/report");
+		expect(url).toBe("http://test-defcon/api/entities/e1/report");
 		expect(opts.method).toBe("POST");
 		const body = JSON.parse(opts.body);
 		expect(body.signal).toBe("provisioned");
