@@ -147,7 +147,11 @@ export class CronScheduler {
       const { flow, refs, artifacts } = watch.action_config;
       log.info(`Watch "${watchName}" creating entity for flow "${flow}"`);
 
-      createEntity({ flow, refs, artifacts }).catch((err) => {
+      createEntity(
+        flow,
+        refs as Record<string, unknown> | undefined,
+        artifacts as Record<string, unknown> | undefined,
+      ).catch((err) => {
         log.error(`Failed to create entity for watch "${watchName}"`, err);
       });
     }

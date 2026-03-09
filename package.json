@@ -9,7 +9,8 @@
     "check": "biome check src/ && tsc --noEmit",
     "lint": "biome check src/",
     "format": "biome format --write src/",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "test": "vitest run"
   },
   "dependencies": {
     "geist": "^1.7.0",
