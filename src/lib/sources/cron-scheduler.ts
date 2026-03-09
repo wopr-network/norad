@@ -55,7 +55,20 @@ export class CronScheduler {
         // was briefly down but avoids replaying old fires after long outages.
         const lastFire = lastCronFireTime(schedule, now);
         const missedFire = lastFire !== null && now - lastFire <= 2 * TICK_INTERVAL_MS;
-        const nextFire = missedFire ? now : nextCronFireTime(schedule, now);
+        let nextFire: number;
+        if (missedFire) {
+          nextFire = now;
+        } else {
+          try {
+            nextFire = nextCronFireTime(schedule, now);
+          } catch (err) {
+            log.error(
+              `Source "${name}" has unreachable cron schedule: ${schedule} — skipping`,
+              err,
+            );
+            continue;
+          }
+        }
         this.states.set(name, {
           sourceName: name,
           type: "cron",

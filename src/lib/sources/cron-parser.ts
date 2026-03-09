@@ -17,7 +17,7 @@ function parseField(field: string, min: number, max: number): Set<number> | null
     if (stepMatch) {
       range = stepMatch[1];
       step = Number.parseInt(stepMatch[2], 10);
-      if (step === 0) return null; // step of 0 is invalid (infinite loop)
+      if (Number.isNaN(step) || step <= 0) return null; // step of 0 or NaN is invalid (infinite loop)
     } else {
       range = part;
     }
