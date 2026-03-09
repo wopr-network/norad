@@ -83,3 +83,47 @@ export interface ActivityPage {
 export async function getEntityActivity(entityId: string, since = 0): Promise<ActivityPage> {
   return fetchJson<ActivityPage>(`/api/entities/${entityId}/activity?since=${since}`);
 }
+
+export interface Source {
+  id: string;
+  name: string;
+  type: string;
+  config: Record<string, unknown>;
+  enabled: boolean;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface Watch {
+  id: string;
+  source_id: string;
+  name: string;
+  filter: Record<string, unknown>;
+  action: string;
+  action_config: Record<string, unknown>;
+  enabled: boolean;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface EventLogEntry {
+  id: string;
+  source_id: string;
+  watch_id: string | null;
+  raw_event: unknown;
+  action_taken: string | null;
+  defcon_response: unknown;
+  created_at: number;
+}
+
+export async function getSources(): Promise<Source[]> {
+  return fetchJson<Source[]>("/api/sources");
+}
+
+export async function getSourceWatches(sourceId: string): Promise<Watch[]> {
+  return fetchJson<Watch[]>(`/api/sources/${encodeURIComponent(sourceId)}/watches`);
+}
+
+export async function getEventLog(limit = 50, offset = 0): Promise<EventLogEntry[]> {
+  return fetchJson<EventLogEntry[]>(`/api/events?limit=${limit}&offset=${offset}`);
+}
