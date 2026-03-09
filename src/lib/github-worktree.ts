@@ -1,5 +1,5 @@
-import { execFile as execFileCb } from "child_process";
-import path from "path";
+import { execFile as execFileCb } from "node:child_process";
+import path from "node:path";
 import { logger } from "./logger";
 
 const log = logger("github-worktree");
