@@ -117,3 +117,17 @@ export async function getEntitiesByState(flowName: string, state: string): Promi
 export async function getEntity(id: string): Promise<Entity> {
   return fetchJson<Entity>(`/api/entities/${encodeURIComponent(id)}`);
 }
+
+export interface CreateEntityRequest {
+  flow: string;
+  refs?: Record<string, unknown>;
+  artifacts?: Record<string, unknown>;
+}
+
+export async function createEntity(req: CreateEntityRequest): Promise<Entity> {
+  return fetchJson<Entity>("/api/entities", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+}

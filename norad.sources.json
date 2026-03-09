@@ -1,0 +1,26 @@
+{
+  "sources": {
+    "nightly-deploy": {
+      "type": "cron",
+      "config": { "schedule": "0 0 * * *" }
+    },
+    "hourly-stale-check": {
+      "type": "cron",
+      "config": { "interval_ms": 3600000 }
+    }
+  },
+  "watches": {
+    "deploy-on-schedule": {
+      "source": "nightly-deploy",
+      "filter": {},
+      "action": "create_entity",
+      "action_config": { "flow": "deploy" }
+    },
+    "check-stale-prs": {
+      "source": "hourly-stale-check",
+      "filter": {},
+      "action": "create_entity",
+      "action_config": { "flow": "stale-pr-check" }
+    }
+  }
+}
