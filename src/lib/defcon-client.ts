@@ -127,6 +127,7 @@ export interface CreateEntityRequest {
 export async function createEntity(req: CreateEntityRequest): Promise<Entity> {
   return fetchJson<Entity>("/api/entities", {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(req),
   });
 }

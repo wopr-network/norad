@@ -50,9 +50,11 @@ export class CronScheduler {
           log.error(`Source "${name}" has invalid cron expression: ${schedule} — skipping`);
           continue;
         }
-        // Check for missed fire: if the most recent fire time is in the past, fire once now
+        // Check for missed fire: fire immediately if the last scheduled fire
+        // is recent (within 2 tick intervals). This catches up if the process
+        // was briefly down but avoids replaying old fires after long outages.
         const lastFire = lastCronFireTime(schedule, now);
-        const missedFire = lastFire !== null && lastFire <= now;
+        const missedFire = lastFire !== null && now - lastFire <= 2 * TICK_INTERVAL_MS;
         const nextFire = missedFire ? now : nextCronFireTime(schedule, now);
         this.states.set(name, {
           sourceName: name,
@@ -80,6 +82,7 @@ export class CronScheduler {
     }
 
     this.timer = setInterval(() => this.tick(), TICK_INTERVAL_MS);
+    this.timer.unref();
     log.info(
       `Cron scheduler started with ${this.states.size} source(s), tick every ${TICK_INTERVAL_MS}ms`,
     );
@@ -113,7 +116,13 @@ export class CronScheduler {
 
     state.lastFiredAt = now;
     if (state.schedule) {
-      state.nextFireAt = nextCronFireTime(state.schedule, now);
+      try {
+        state.nextFireAt = nextCronFireTime(state.schedule, now);
+      } catch (err) {
+        log.error(`Failed to compute next fire time for "${name}", stopping source`, err);
+        this.states.delete(name);
+        return;
+      }
     } else if (state.interval_ms) {
       state.nextFireAt = now + state.interval_ms;
     }

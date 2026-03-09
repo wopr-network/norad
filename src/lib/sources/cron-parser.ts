@@ -4,6 +4,8 @@ interface CronFields {
   daysOfMonth: Set<number>;
   months: Set<number>;
   daysOfWeek: Set<number>;
+  domWild: boolean;
+  dowWild: boolean;
 }
 
 function parseField(field: string, min: number, max: number): Set<number> | null {
@@ -15,6 +17,7 @@ function parseField(field: string, min: number, max: number): Set<number> | null
     if (stepMatch) {
       range = stepMatch[1];
       step = Number.parseInt(stepMatch[2], 10);
+      if (step === 0) return null; // step of 0 is invalid (infinite loop)
     } else {
       range = part;
     }
@@ -32,7 +35,12 @@ function parseField(field: string, min: number, max: number): Set<number> | null
     } else {
       const val = Number.parseInt(range, 10);
       if (Number.isNaN(val) || val < min || val > max) return null;
-      values.add(val);
+      if (step > 1) {
+        // scalar/step means "starting at val, every step up to max"
+        for (let i = val; i <= max; i += step) values.add(i);
+      } else {
+        values.add(val);
+      }
     }
   }
   return values.size > 0 ? values : null;
@@ -56,7 +64,21 @@ function parseCron(expression: string): CronFields | null {
     daysOfWeek.delete(7);
   }
 
-  return { minutes, hours, daysOfMonth, months, daysOfWeek };
+  // Track whether dom/dow were wildcards (affects OR vs AND matching)
+  const domWild = parts[2] === "*";
+  const dowWild = parts[4] === "*";
+
+  return { minutes, hours, daysOfMonth, months, daysOfWeek, domWild, dowWild };
+}
+
+function matchesDayFields(fields: CronFields, d: Date): boolean {
+  const domMatch = fields.daysOfMonth.has(d.getUTCDate());
+  const dowMatch = fields.daysOfWeek.has(d.getUTCDay());
+  // Standard cron: if both dom and dow are restricted (non-wildcard), match if either matches (OR)
+  // If only one is restricted, require that one to match
+  if (!fields.domWild && !fields.dowWild) return domMatch || dowMatch;
+  if (fields.domWild) return dowMatch;
+  return domMatch;
 }
 
 export function isValidCron(expression: string): boolean {
@@ -78,8 +100,7 @@ export function lastCronFireTime(expression: string, nowMs: number): number | nu
   // Check if current minute matches
   if (
     fields.months.has(d.getUTCMonth() + 1) &&
-    fields.daysOfMonth.has(d.getUTCDate()) &&
-    fields.daysOfWeek.has(d.getUTCDay()) &&
+    matchesDayFields(fields, d) &&
     fields.hours.has(d.getUTCHours()) &&
     fields.minutes.has(d.getUTCMinutes())
   ) {
@@ -92,8 +113,7 @@ export function lastCronFireTime(expression: string, nowMs: number): number | nu
   while (d.getTime() >= limit) {
     if (
       fields.months.has(d.getUTCMonth() + 1) &&
-      fields.daysOfMonth.has(d.getUTCDate()) &&
-      fields.daysOfWeek.has(d.getUTCDay()) &&
+      matchesDayFields(fields, d) &&
       fields.hours.has(d.getUTCHours()) &&
       fields.minutes.has(d.getUTCMinutes())
     ) {
@@ -119,8 +139,7 @@ export function nextCronFireTime(expression: string, fromMs: number): number {
   while (d.getTime() <= limit) {
     if (
       fields.months.has(d.getUTCMonth() + 1) &&
-      fields.daysOfMonth.has(d.getUTCDate()) &&
-      fields.daysOfWeek.has(d.getUTCDay()) &&
+      matchesDayFields(fields, d) &&
       fields.hours.has(d.getUTCHours()) &&
       fields.minutes.has(d.getUTCMinutes())
     ) {
