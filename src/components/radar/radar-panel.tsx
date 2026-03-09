@@ -2,6 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { EventLogEntry, SlotPool, Source, Watch, Worker } from "@/lib/radar-client";
+import {
+  getEventLog,
+  getSlotPool,
+  getSources,
+  getSourceWatches,
+  getWorkers,
+} from "@/lib/radar-client";
 import { EventLogPanel } from "./event-log";
 import { SlotGrid } from "./slot-grid";
 import { SourcesPanel } from "./sources-panel";
@@ -20,22 +27,10 @@ export interface RadarState {
 
 async function fetchRadarState(): Promise<RadarState> {
   const [poolRes, workersRes, eventsRes, sourcesRes] = await Promise.allSettled([
-    fetch("/api/radar/pool/slots").then((r) => {
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return r.json() as Promise<SlotPool>;
-    }),
-    fetch("/api/radar/workers").then((r) => {
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return r.json() as Promise<Worker[]>;
-    }),
-    fetch("/api/radar/events?limit=100").then((r) => {
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return r.json() as Promise<EventLogEntry[]>;
-    }),
-    fetch("/api/radar/sources").then((r) => {
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return r.json() as Promise<Source[]>;
-    }),
+    getSlotPool(),
+    getWorkers(),
+    getEventLog(100),
+    getSources(),
   ]);
 
   const degraded = [poolRes, workersRes, eventsRes, sourcesRes].some(
@@ -50,14 +45,7 @@ async function fetchRadarState(): Promise<RadarState> {
 
   const watchesBySource: Record<string, Watch[]> = {};
   if (sources.length > 0) {
-    const watchResults = await Promise.allSettled(
-      sources.map((s) =>
-        fetch(`/api/radar/sources/${encodeURIComponent(s.id)}/watches`).then((r) => {
-          if (!r.ok) throw new Error(`HTTP ${r.status}`);
-          return r.json() as Promise<Watch[]>;
-        }),
-      ),
-    );
+    const watchResults = await Promise.allSettled(sources.map((s) => getSourceWatches(s.id)));
     for (let i = 0; i < sources.length; i++) {
       const result = watchResults[i];
       watchesBySource[sources[i].id] = result.status === "fulfilled" ? result.value : [];

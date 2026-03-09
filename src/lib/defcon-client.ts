@@ -117,3 +117,15 @@ export async function getEntitiesByState(flowName: string, state: string): Promi
 export async function getEntity(id: string): Promise<Entity> {
   return fetchJson<Entity>(`/api/entities/${encodeURIComponent(id)}`);
 }
+
+export async function drainWorker(workerId: string): Promise<void> {
+  await fetchJson<unknown>(`/api/admin/workers/${encodeURIComponent(workerId)}/drain`, {
+    method: "POST",
+  });
+}
+
+export async function undrainWorker(workerId: string): Promise<void> {
+  await fetchJson<unknown>(`/api/admin/workers/${encodeURIComponent(workerId)}/undrain`, {
+    method: "POST",
+  });
+}

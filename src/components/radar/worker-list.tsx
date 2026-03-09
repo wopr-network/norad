@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { BadgeVariant } from "@/components/ui/badge";
 import { Badge } from "@/components/ui/badge";
+import { drainWorker, undrainWorker } from "@/lib/defcon-client";
 import type { Worker } from "@/lib/radar-client";
 
 function workerStatusVariant(status: string): BadgeVariant {
@@ -34,14 +35,14 @@ export function WorkerList({ workers, onDrainToggle }: WorkerListProps) {
   async function toggleDrain(workerId: string, isDrained: boolean) {
     setLoading(workerId);
     try {
-      const action = isDrained ? "undrain" : "drain";
-      const res = await fetch(
-        `/api/defcon/admin/workers/${encodeURIComponent(workerId)}/${action}`,
-        { method: "POST" },
-      );
-      if (res.ok) {
-        onDrainToggle?.();
+      if (isDrained) {
+        await undrainWorker(workerId);
+      } else {
+        await drainWorker(workerId);
       }
+      onDrainToggle?.();
+    } catch {
+      // network failure — leave drain state unchanged
     } finally {
       setLoading(null);
     }
