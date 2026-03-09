@@ -35,10 +35,13 @@ export function WorkerList({ workers, onDrainToggle }: WorkerListProps) {
     setLoading(workerId);
     try {
       const action = isDrained ? "undrain" : "drain";
-      await fetch(`/api/defcon/admin/workers/${encodeURIComponent(workerId)}/${action}`, {
-        method: "POST",
-      });
-      onDrainToggle?.();
+      const res = await fetch(
+        `/api/defcon/admin/workers/${encodeURIComponent(workerId)}/${action}`,
+        { method: "POST" },
+      );
+      if (res.ok) {
+        onDrainToggle?.();
+      }
     } finally {
       setLoading(null);
     }

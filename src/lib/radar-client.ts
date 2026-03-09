@@ -22,13 +22,6 @@ export interface Worker {
   last_heartbeat?: string;
 }
 
-export interface EventLog {
-  id: string;
-  type: string;
-  payload: Record<string, unknown>;
-  createdAt: string;
-}
-
 export interface SlotPool {
   slots: Slot[];
   available: number;
@@ -59,10 +52,6 @@ export async function getSlotPool(): Promise<SlotPool> {
 
 export async function getWorkers(): Promise<Worker[]> {
   return fetchJson<Worker[]>("/api/workers");
-}
-
-export async function getEvents(limit = 50, offset = 0): Promise<EventLog[]> {
-  return fetchJson<EventLog[]>(`/api/events?limit=${limit}&offset=${offset}`);
 }
 
 export interface ActivityItem {

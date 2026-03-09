@@ -20,10 +20,22 @@ export interface RadarState {
 
 async function fetchRadarState(): Promise<RadarState> {
   const [poolRes, workersRes, eventsRes, sourcesRes] = await Promise.allSettled([
-    fetch("/api/radar/pool/slots").then((r) => r.json()) as Promise<SlotPool>,
-    fetch("/api/radar/workers").then((r) => r.json()) as Promise<Worker[]>,
-    fetch("/api/radar/events?limit=100").then((r) => r.json()) as Promise<EventLogEntry[]>,
-    fetch("/api/radar/sources").then((r) => r.json()) as Promise<Source[]>,
+    fetch("/api/radar/pool/slots").then((r) => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json() as Promise<SlotPool>;
+    }),
+    fetch("/api/radar/workers").then((r) => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json() as Promise<Worker[]>;
+    }),
+    fetch("/api/radar/events?limit=100").then((r) => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json() as Promise<EventLogEntry[]>;
+    }),
+    fetch("/api/radar/sources").then((r) => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json() as Promise<Source[]>;
+    }),
   ]);
 
   const degraded = [poolRes, workersRes, eventsRes, sourcesRes].some(
@@ -40,9 +52,10 @@ async function fetchRadarState(): Promise<RadarState> {
   if (sources.length > 0) {
     const watchResults = await Promise.allSettled(
       sources.map((s) =>
-        fetch(`/api/radar/sources/${encodeURIComponent(s.id)}/watches`).then(
-          (r) => r.json() as Promise<Watch[]>,
-        ),
+        fetch(`/api/radar/sources/${encodeURIComponent(s.id)}/watches`).then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.json() as Promise<Watch[]>;
+        }),
       ),
     );
     for (let i = 0; i < sources.length; i++) {

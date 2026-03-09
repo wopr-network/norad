@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { EventLogEntry } from "@/lib/radar-client";
 
 const PAGE_SIZE = 20;
@@ -71,6 +71,10 @@ export function EventLogPanel({ events }: EventLogPanelProps) {
     : events;
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+
+  useEffect(() => {
+    setPage((p) => (p >= totalPages ? 0 : p));
+  }, [totalPages]);
   const pageEvents = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   return (
