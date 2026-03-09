@@ -9,4 +9,7 @@ export const GITHUB_BASE_URL = "https://github.com/";
 export const LINEAR_BASE_URL = "https://linear.app/wopr/issue/";
 export const SOURCES_CONFIG_PATH = process.env.SOURCES_CONFIG_PATH ?? "./norad.sources.json";
 export const WORKTREE_BASE = process.env.WORKTREE_BASE ?? "/tmp/norad-worktrees";
-export const NORAD_REPO_PATH = process.env.NORAD_REPO_PATH ?? "";
+if (!process.env.NORAD_REPO_PATH) {
+  throw new Error("NORAD_REPO_PATH environment variable is required");
+}
+export const NORAD_REPO_PATH = process.env.NORAD_REPO_PATH;

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock child_process before importing module
-vi.mock("child_process", () => ({
+vi.mock("node:child_process", () => ({
 	execFile: vi.fn(),
 }));
 
@@ -11,7 +11,7 @@ vi.mock("@/lib/config", () => ({
 	NORAD_REPO_PATH: "/repos/wopr",
 }));
 
-import { execFile } from "child_process";
+import { execFile } from "node:child_process";
 import { createWorktree, removeWorktree, validateWorktreePath } from "@/lib/github-worktree";
 
 const mockExecFile = vi.mocked(execFile);

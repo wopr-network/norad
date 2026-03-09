@@ -77,7 +77,7 @@ describe("provisionGitHubEntity", () => {
 		expect(result.worktree.branch).toBe("feature/WOP-123");
 	});
 
-	it("does not report artifacts if worktree creation fails", async () => {
+	it("signals failure to defcon if worktree creation fails", async () => {
 		mockCreateWorktree.mockRejectedValue(new Error("git failed"));
 
 		await expect(
@@ -88,7 +88,9 @@ describe("provisionGitHubEntity", () => {
 			}),
 		).rejects.toThrow("git failed");
 
-		expect(mockReportSignal).not.toHaveBeenCalled();
+		expect(mockReportSignal).toHaveBeenCalledWith("e1", "failed", {
+			error: "Error: git failed",
+		});
 	});
 });
 
@@ -104,5 +106,12 @@ describe("cleanupEntityWorktree", () => {
 			"/repos/wopr",
 			"/tmp/norad-worktrees/feature/WOP-123",
 		);
+	});
+
+	it("rejects path outside WORKTREE_BASE", async () => {
+		await expect(
+			cleanupEntityWorktree("e1", "/etc/passwd", "/repos/wopr"),
+		).rejects.toThrow("path traversal");
+		expect(mockRemoveWorktree).not.toHaveBeenCalled();
 	});
 });

@@ -1,3 +1,4 @@
+import path from "node:path";
 import { NORAD_REPO_PATH, WORKTREE_BASE } from "./config";
 import { createEntity, type Entity, type EntityRefs, reportSignal } from "./defcon-client";
 import {
@@ -29,7 +30,7 @@ function toBranchName(externalId: string): string {
 
 export async function provisionGitHubEntity(params: ProvisionParams): Promise<ProvisionedEntity> {
   const { flowName, externalId, repo, refs, payload } = params;
-  const entityRefs: EntityRefs = { github: { repo }, ...refs };
+  const entityRefs: EntityRefs = { ...refs, github: { repo } };
 
   log.info(`provisioning entity for ${flowName} externalId=${externalId}`);
 
@@ -38,7 +39,13 @@ export async function provisionGitHubEntity(params: ProvisionParams): Promise<Pr
   const branch = toBranchName(externalId);
   const worktreePath = validateWorktreePath(WORKTREE_BASE, branch);
 
-  await createWorktree(NORAD_REPO_PATH, branch, worktreePath);
+  try {
+    await createWorktree(NORAD_REPO_PATH, branch, worktreePath);
+  } catch (err) {
+    log.error(`worktree creation failed for entity ${entity.id}, signalling failure`, err);
+    await reportSignal(entity.id, "failed", { error: String(err) });
+    throw err;
+  }
 
   await reportSignal(entity.id, "provisioned", {
     worktreePath,
@@ -60,5 +67,10 @@ export async function cleanupEntityWorktree(
   repoPath: string,
 ): Promise<void> {
   log.info(`cleaning up worktree for entity ${entityId}`);
+  const resolvedBase = path.resolve(WORKTREE_BASE);
+  const resolvedPath = path.resolve(worktreePath);
+  if (!resolvedPath.startsWith(resolvedBase + path.sep) && resolvedPath !== resolvedBase) {
+    throw new Error(`path traversal: ${worktreePath} resolves outside ${WORKTREE_BASE}`);
+  }
   await removeWorktree(repoPath, worktreePath);
 }
