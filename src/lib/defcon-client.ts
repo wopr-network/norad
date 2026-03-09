@@ -118,16 +118,44 @@ export async function getEntity(id: string): Promise<Entity> {
   return fetchJson<Entity>(`/api/entities/${encodeURIComponent(id)}`);
 }
 
-export interface CreateEntityRequest {
-  flow: string;
-  refs?: Record<string, unknown>;
-  artifacts?: Record<string, unknown>;
+export async function createEntity(
+  flowName: string,
+  refs?: EntityRefs,
+  payload?: Record<string, unknown>,
+): Promise<Entity> {
+  const url = `${DEFCON_URL}/api/entities`;
+  const body: Record<string, unknown> = { flow: flowName };
+  if (refs) body.refs = refs;
+  if (payload) body.payload = payload;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    log.error(`POST ${url} → ${res.status}`);
+    throw new Error(`DEFCON ${res.status}: POST /api/entities`);
+  }
+  return res.json() as Promise<Entity>;
 }
 
-export async function createEntity(req: CreateEntityRequest): Promise<Entity> {
-  return fetchJson<Entity>("/api/entities", {
+export async function reportSignal(
+  entityId: string,
+  signal: string,
+  artifacts?: Record<string, unknown>,
+): Promise<void> {
+  const url = `${DEFCON_URL}/api/entities/${encodeURIComponent(entityId)}/report`;
+  const body: Record<string, unknown> = { signal };
+  if (artifacts) body.artifacts = artifacts;
+
+  const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(req),
+    headers: authHeaders(),
+    body: JSON.stringify(body),
   });
+  if (!res.ok) {
+    log.error(`POST ${url} → ${res.status}`);
+    throw new Error(`DEFCON ${res.status}: POST /api/entities/${entityId}/report`);
+  }
 }
