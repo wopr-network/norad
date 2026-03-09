@@ -1,33 +1,59 @@
-import { EventLogPanel } from "@/components/radar/event-log";
-import { SlotGrid } from "@/components/radar/slot-grid";
-import { WorkerList } from "@/components/radar/worker-list";
+import type { RadarState } from "@/components/radar/radar-panel";
+import { RadarPanel } from "@/components/radar/radar-panel";
 import { logger } from "@/lib/logger";
-import { getEvents, getSlotPool, getWorkers } from "@/lib/radar-client";
+import type { EventLogEntry, Source, Watch } from "@/lib/radar-client";
+import {
+  getEventLog,
+  getSlotPool,
+  getSources,
+  getSourceWatches,
+  getWorkers,
+} from "@/lib/radar-client";
 
 const log = logger("radar-page");
 
 export const dynamic = "force-dynamic";
 
 export default async function RadarPage() {
-  const [poolResult, workersResult, eventsResult] = await Promise.allSettled([
+  const [poolResult, workersResult, eventsResult, sourcesResult] = await Promise.allSettled([
     getSlotPool(),
     getWorkers(),
-    getEvents(50),
+    getEventLog(100),
+    getSources(),
   ]);
 
-  const degraded = [poolResult, workersResult, eventsResult].some((r) => r.status === "rejected");
-  if (degraded) {
-    for (const result of [poolResult, workersResult, eventsResult]) {
-      if (result.status === "rejected") {
-        log.error("radar upstream failure", result.reason);
-      }
+  for (const result of [poolResult, workersResult, eventsResult, sourcesResult]) {
+    if (result.status === "rejected") {
+      log.error("radar upstream failure", result.reason);
     }
   }
 
+  const degraded = [poolResult, workersResult, eventsResult, sourcesResult].some(
+    (r) => r.status === "rejected",
+  );
   const pool =
     poolResult.status === "fulfilled" ? poolResult.value : { slots: [], available: 0, capacity: 0 };
   const workers = workersResult.status === "fulfilled" ? workersResult.value : [];
-  const events = eventsResult.status === "fulfilled" ? eventsResult.value : [];
+  const events: EventLogEntry[] = eventsResult.status === "fulfilled" ? eventsResult.value : [];
+  const sources: Source[] = sourcesResult.status === "fulfilled" ? sourcesResult.value : [];
+
+  const watchesBySource: Record<string, Watch[]> = {};
+  if (sources.length > 0) {
+    const watchResults = await Promise.allSettled(sources.map((s) => getSourceWatches(s.id)));
+    for (let i = 0; i < sources.length; i++) {
+      const result = watchResults[i];
+      watchesBySource[sources[i].id] = result.status === "fulfilled" ? result.value : [];
+    }
+  }
+
+  const initial: RadarState = {
+    pool,
+    workers,
+    events,
+    sources,
+    watchesBySource,
+    degraded,
+  };
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-6">
@@ -39,25 +65,10 @@ export default async function RadarPage() {
           Radar
         </h1>
         <span className="text-xs tracking-wider" style={{ color: "var(--muted-foreground)" }}>
-          / worker pool
+          / detection &amp; dispatch
         </span>
-        {degraded && (
-          <span
-            className="text-xs font-bold tracking-wider uppercase"
-            style={{ color: "var(--accent-red)" }}
-          >
-            DEGRADED
-          </span>
-        )}
       </div>
-
-      <div className="flex flex-col gap-8">
-        <SlotGrid slots={pool.slots} available={pool.available} capacity={pool.capacity} />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <EventLogPanel events={events} />
-          <WorkerList workers={workers} />
-        </div>
-      </div>
+      <RadarPanel initial={initial} />
     </div>
   );
 }
