@@ -1,10 +1,24 @@
+import nodePath from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+function validateWorktreePathReal(base: string, subpath: string): string {
+	if (nodePath.isAbsolute(subpath)) {
+		throw new Error(`path traversal: absolute path rejected: ${subpath}`);
+	}
+	const resolvedBase = nodePath.resolve(base);
+	const resolved = nodePath.resolve(base, subpath);
+	if (!resolved.startsWith(resolvedBase + nodePath.sep) && resolved !== resolvedBase) {
+		throw new Error(`path traversal: ${subpath} resolves outside ${base}`);
+	}
+	return resolved;
+}
 
 vi.mock("@/lib/config", () => ({
 	DEFCON_URL: "http://localhost:3001",
 	DEFCON_ADMIN_TOKEN: "",
 	WORKTREE_BASE: "/tmp/norad-worktrees",
 	NORAD_REPO_PATH: "/repos/wopr",
+	requireNoradRepoPath: () => "/repos/wopr",
 }));
 
 vi.mock("@/lib/defcon-client", () => ({
@@ -98,6 +112,7 @@ describe("cleanupEntityWorktree", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mockRemoveWorktree.mockResolvedValue(undefined);
+		mockValidatePath.mockImplementation(validateWorktreePathReal);
 	});
 
 	it("removes the worktree", async () => {

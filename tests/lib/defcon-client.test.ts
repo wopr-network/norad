@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/config", () => ({
-	DEFCON_URL: "http://localhost:3001",
+	DEFCON_URL: process.env.DEFCON_URL ?? "http://localhost:3001",
 	DEFCON_ADMIN_TOKEN: "test-token",
 }));
 

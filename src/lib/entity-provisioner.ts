@@ -47,11 +47,17 @@ export async function provisionGitHubEntity(params: ProvisionParams): Promise<Pr
     throw err;
   }
 
-  await reportSignal(entity.id, "provisioned", {
-    worktreePath,
-    branch,
-    repo,
-  });
+  try {
+    await reportSignal(entity.id, "provisioned", {
+      worktreePath,
+      branch,
+      repo,
+    });
+  } catch (err) {
+    log.error(`reportSignal failed for entity ${entity.id}, removing orphaned worktree`, err);
+    await removeWorktree(requireNoradRepoPath(), worktreePath);
+    throw err;
+  }
 
   log.info(`entity ${entity.id} provisioned: branch=${branch} path=${worktreePath}`);
 
@@ -67,10 +73,7 @@ export async function cleanupEntityWorktree(
   repoPath: string,
 ): Promise<void> {
   log.info(`cleaning up worktree for entity ${entityId}`);
-  const resolvedBase = path.resolve(WORKTREE_BASE);
-  const resolvedPath = path.resolve(worktreePath);
-  if (!resolvedPath.startsWith(resolvedBase + path.sep) && resolvedPath !== resolvedBase) {
-    throw new Error(`path traversal: ${worktreePath} resolves outside ${WORKTREE_BASE}`);
-  }
+  const branch = path.relative(WORKTREE_BASE, path.resolve(worktreePath));
+  validateWorktreePath(WORKTREE_BASE, branch);
   await removeWorktree(repoPath, worktreePath);
 }
