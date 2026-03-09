@@ -1,5 +1,5 @@
 import path from "node:path";
-import { NORAD_REPO_PATH, WORKTREE_BASE } from "./config";
+import { requireNoradRepoPath, WORKTREE_BASE } from "./config";
 import { createEntity, type Entity, type EntityRefs, reportSignal } from "./defcon-client";
 import {
   createWorktree,
@@ -40,7 +40,7 @@ export async function provisionGitHubEntity(params: ProvisionParams): Promise<Pr
   const worktreePath = validateWorktreePath(WORKTREE_BASE, branch);
 
   try {
-    await createWorktree(NORAD_REPO_PATH, branch, worktreePath);
+    await createWorktree(requireNoradRepoPath(), branch, worktreePath);
   } catch (err) {
     log.error(`worktree creation failed for entity ${entity.id}, signalling failure`, err);
     await reportSignal(entity.id, "failed", { error: String(err) });
