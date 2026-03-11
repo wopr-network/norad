@@ -34,6 +34,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pat
       headers: siloHeaders(),
       body: body || undefined,
     });
+    if (res.status === 204 || !res.headers.get("content-type")?.includes("application/json")) {
+      return new NextResponse(null, { status: res.status });
+    }
     const responseBody = await res.json();
     return NextResponse.json(responseBody, { status: res.status });
   } catch {
@@ -52,6 +55,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ pa
       headers: siloHeaders(),
       body: body || undefined,
     });
+    if (res.status === 204 || !res.headers.get("content-type")?.includes("application/json")) {
+      return new NextResponse(null, { status: res.status });
+    }
     const responseBody = await res.json();
     return NextResponse.json(responseBody, { status: res.status });
   } catch {

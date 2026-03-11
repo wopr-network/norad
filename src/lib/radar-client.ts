@@ -1,4 +1,4 @@
-import { SILO_URL, SILO_ADMIN_TOKEN } from "./config";
+import { SILO_ADMIN_TOKEN, SILO_URL, WOPR_TENANT_ID } from "./config";
 import { logger } from "./logger";
 
 const log = logger("radar-client");
@@ -40,8 +40,9 @@ async function fetchJson<T>(path: string): Promise<T> {
   const url = resolveUrl(path);
   const isServerSide = typeof window === "undefined";
   const headers: Record<string, string> = {};
-  if (isServerSide && SILO_ADMIN_TOKEN) {
-    headers.Authorization = `Bearer ${SILO_ADMIN_TOKEN}`;
+  if (isServerSide) {
+    headers["X-Tenant-Id"] = WOPR_TENANT_ID;
+    if (SILO_ADMIN_TOKEN) headers.Authorization = `Bearer ${SILO_ADMIN_TOKEN}`;
   }
   const res = await fetch(url, { next: { revalidate: 0 }, headers });
   if (!res.ok) {

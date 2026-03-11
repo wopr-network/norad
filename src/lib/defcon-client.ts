@@ -94,6 +94,9 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
       log.error(`GET ${url} → ${res.status}`);
       throw new Error(`DEFCON ${res.status}: ${path}`);
     }
+    if (res.status === 204 || res.headers.get("content-length") === "0") {
+      return undefined as T;
+    }
     return res.json() as Promise<T>;
   } catch (error) {
     log.error(`GET ${url} failed`, error);

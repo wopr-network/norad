@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { type NextRequest, NextResponse } from "next/server";
 import { APP_URL, LINEAR_CLIENT_ID, LINEAR_CLIENT_SECRET } from "@/lib/config";
 import {
@@ -8,6 +9,15 @@ import {
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
+  const state = req.nextUrl.searchParams.get("state");
+
+  // Validate CSRF state nonce
+  const cookieStore = await cookies();
+  const expectedState = cookieStore.get("oauth_state_linear")?.value;
+  cookieStore.delete("oauth_state_linear");
+  if (!expectedState || state !== expectedState) {
+    return NextResponse.redirect(`${APP_URL}/settings/integrations?error=invalid_state`);
+  }
 
   if (!code) {
     return NextResponse.redirect(`${APP_URL}/settings/integrations?error=missing_code`);
@@ -39,7 +49,7 @@ export async function GET(req: NextRequest) {
 
   if (!tokenData.access_token) {
     return NextResponse.redirect(
-      `${APP_URL}/settings/integrations?error=${tokenData.error ?? "no_token"}`,
+      `${APP_URL}/settings/integrations?error=${encodeURIComponent(tokenData.error ?? "no_token")}`,
     );
   }
 

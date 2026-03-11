@@ -2,7 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import type { Integration } from "@/lib/defcon-client";
+import type { Integration, IntegrationCategory, IntegrationProvider } from "@/lib/defcon-client";
+import {
+  createIntegration,
+  deleteIntegration,
+  updateIntegrationCredentials,
+} from "@/lib/defcon-client";
 
 interface Props {
   github: Integration | null;
@@ -108,33 +113,33 @@ function IntegrationCard({
   const [showKeyInput, setShowKeyInput] = useState(false);
   const [apiKey, setApiKey] = useState("");
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [disconnecting, setDisconnecting] = useState(false);
 
   async function handleSaveApiKey() {
     if (!apiKey.trim()) return;
     setSaving(true);
+    setSaveError(null);
     try {
-      const body = integration
-        ? { credentials: { provider, accessToken: apiKey } }
-        : {
-            name,
-            category: provider === "github" ? "vcs" : "issue_tracker",
-            provider,
-            credentials: { provider, accessToken: apiKey },
-          };
-
-      const path = integration
-        ? `/api/defcon/admin/integrations/${integration.id}`
-        : "/api/defcon/admin/integrations";
-
-      await fetch(path, {
-        method: integration ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const credentials = {
+        provider: provider as IntegrationProvider,
+        accessToken: apiKey.trim(),
+      };
+      if (integration) {
+        await updateIntegrationCredentials(integration.id, credentials);
+      } else {
+        await createIntegration({
+          name,
+          category: (provider === "github" ? "vcs" : "issue_tracker") as IntegrationCategory,
+          provider: provider as IntegrationProvider,
+          credentials,
+        });
+      }
       setShowKeyInput(false);
       setApiKey("");
       router.refresh();
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Save failed");
     } finally {
       setSaving(false);
     }
@@ -144,7 +149,7 @@ function IntegrationCard({
     if (!integration) return;
     setDisconnecting(true);
     try {
-      await fetch(`/api/defcon/admin/integrations/${integration.id}`, { method: "DELETE" });
+      await deleteIntegration(integration.id);
       router.refresh();
     } finally {
       setDisconnecting(false);
@@ -227,8 +232,14 @@ function IntegrationCard({
       {supportsApiKey && (
         <div>
           {showKeyInput ? (
-            <div className="flex items-center gap-2">
-              <input
+            <div className="flex flex-col gap-2">
+              {saveError && (
+                <p className="text-xs" style={{ color: "var(--accent-red)" }}>
+                  {saveError}
+                </p>
+              )}
+              <div className="flex items-center gap-2">
+                <input
                 type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
@@ -252,12 +263,14 @@ function IntegrationCard({
                 onClick={() => {
                   setShowKeyInput(false);
                   setApiKey("");
+                  setSaveError(null);
                 }}
                 className="text-xs px-3 py-1.5 rounded"
                 style={{ color: "var(--muted-foreground)" }}
               >
                 Cancel
               </button>
+            </div>
             </div>
           ) : (
             <button

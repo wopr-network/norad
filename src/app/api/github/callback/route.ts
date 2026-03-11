@@ -1,11 +1,24 @@
+import { cookies } from "next/headers";
 import { type NextRequest, NextResponse } from "next/server";
 import { APP_URL, GITHUB_APP_CLIENT_ID, GITHUB_APP_CLIENT_SECRET } from "@/lib/config";
-import { createIntegration, listIntegrations } from "@/lib/defcon-client";
+import {
+  createIntegration,
+  listIntegrations,
+  updateIntegrationCredentials,
+} from "@/lib/defcon-client";
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
   const installationId = req.nextUrl.searchParams.get("installation_id");
-  const _state = req.nextUrl.searchParams.get("state");
+  const state = req.nextUrl.searchParams.get("state");
+
+  // Validate CSRF state nonce
+  const cookieStore = await cookies();
+  const expectedState = cookieStore.get("oauth_state_github")?.value;
+  cookieStore.delete("oauth_state_github");
+  if (!expectedState || state !== expectedState) {
+    return NextResponse.redirect(`${APP_URL}/settings/integrations?error=invalid_state`);
+  }
 
   if (!code) {
     return NextResponse.redirect(`${APP_URL}/settings/integrations?error=missing_code`);
@@ -29,7 +42,7 @@ export async function GET(req: NextRequest) {
   const tokenData = (await tokenRes.json()) as { access_token?: string; error?: string };
   if (!tokenData.access_token) {
     return NextResponse.redirect(
-      `${APP_URL}/settings/integrations?error=${tokenData.error ?? "no_token"}`,
+      `${APP_URL}/settings/integrations?error=${encodeURIComponent(tokenData.error ?? "no_token")}`,
     );
   }
 
@@ -44,7 +57,6 @@ export async function GET(req: NextRequest) {
   };
 
   if (current) {
-    const { updateIntegrationCredentials } = await import("@/lib/defcon-client");
     await updateIntegrationCredentials(current.id, credentials);
   } else {
     await createIntegration({
