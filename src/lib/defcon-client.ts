@@ -1,4 +1,4 @@
-import { DEFCON_ADMIN_TOKEN, DEFCON_URL } from "./config";
+import { SILO_ADMIN_TOKEN, SILO_URL, WOPR_TENANT_ID } from "./config";
 import { logger } from "./logger";
 
 const log = logger("defcon-client");
@@ -56,17 +56,20 @@ export interface DefconStatus {
 }
 
 function authHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (DEFCON_ADMIN_TOKEN) {
-    headers.Authorization = `Bearer ${DEFCON_ADMIN_TOKEN}`;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-Tenant-Id": WOPR_TENANT_ID,
+  };
+  if (SILO_ADMIN_TOKEN) {
+    headers.Authorization = `Bearer ${SILO_ADMIN_TOKEN}`;
   }
   return headers;
 }
 
 function resolveUrl(path: string): string {
-  // Server-side: call DEFCON directly. Browser-side: proxy through Next.js API route.
+  // Server-side: call silo directly. Browser-side: proxy through Next.js API route.
   if (typeof window === "undefined") {
-    return `${DEFCON_URL}${path}`;
+    return `${SILO_URL}${path}`;
   }
   // path is like /api/status or /api/entities?... — strip /api/ prefix for proxy route
   return path.replace(/^\/api\//, "/api/defcon/");
@@ -116,4 +119,67 @@ export async function getEntitiesByState(flowName: string, state: string): Promi
 
 export async function getEntity(id: string): Promise<Entity> {
   return fetchJson<Entity>(`/api/entities/${encodeURIComponent(id)}`);
+}
+
+// ─── Integrations ───────────────────────────────────────────────────────────
+
+export type IntegrationCategory = "issue_tracker" | "vcs";
+export type IntegrationProvider = "linear" | "jira" | "github_issues" | "github" | "gitlab";
+
+export interface IntegrationCredentials {
+  provider: IntegrationProvider;
+  accessToken: string;
+  installationId?: number;
+  workspaceId?: string;
+  cloudId?: string;
+  baseUrl?: string;
+}
+
+export interface Integration {
+  id: string;
+  tenantId: string;
+  name: string;
+  category: IntegrationCategory;
+  provider: IntegrationProvider;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function listIntegrations(category?: IntegrationCategory): Promise<Integration[]> {
+  const qs = category ? `?category=${encodeURIComponent(category)}` : "";
+  const data = await fetchJson<{ integrations: Integration[] }>(`/api/admin/integrations${qs}`);
+  return data.integrations;
+}
+
+export async function createIntegration(payload: {
+  name: string;
+  category: IntegrationCategory;
+  provider: IntegrationProvider;
+  credentials: IntegrationCredentials;
+}): Promise<Integration> {
+  const data = await fetchJson<{ integration: Integration }>("/api/admin/integrations", {
+    method: "POST",
+    body: JSON.stringify({ ...payload, tenant_id: WOPR_TENANT_ID }),
+  });
+  return data.integration;
+}
+
+export async function updateIntegrationCredentials(
+  id: string,
+  credentials: IntegrationCredentials,
+): Promise<Integration> {
+  const data = await fetchJson<{ integration: Integration }>(
+    `/api/admin/integrations/${encodeURIComponent(id)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ credentials }),
+    },
+  );
+  return data.integration;
+}
+
+export async function deleteIntegration(id: string): Promise<void> {
+  await fetchJson<unknown>(`/api/admin/integrations/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
 }

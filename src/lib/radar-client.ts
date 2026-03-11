@@ -1,4 +1,4 @@
-import { RADAR_URL } from "./config";
+import { SILO_URL, SILO_ADMIN_TOKEN } from "./config";
 import { logger } from "./logger";
 
 const log = logger("radar-client");
@@ -30,18 +30,23 @@ export interface SlotPool {
 
 function resolveUrl(path: string): string {
   if (typeof window === "undefined") {
-    return `${RADAR_URL}${path}`;
+    return `${SILO_URL}${path}`;
   }
-  // Browser: proxy through Next.js API route to avoid cross-origin issues
-  return path.replace(/^\/api\//, "/api/radar/");
+  // Browser: proxy through the existing defcon Next.js proxy
+  return path.replace(/^\/api\//, "/api/defcon/");
 }
 
 async function fetchJson<T>(path: string): Promise<T> {
   const url = resolveUrl(path);
-  const res = await fetch(url, { next: { revalidate: 0 } });
+  const isServerSide = typeof window === "undefined";
+  const headers: Record<string, string> = {};
+  if (isServerSide && SILO_ADMIN_TOKEN) {
+    headers.Authorization = `Bearer ${SILO_ADMIN_TOKEN}`;
+  }
+  const res = await fetch(url, { next: { revalidate: 0 }, headers });
   if (!res.ok) {
     log.error(`GET ${url} → ${res.status}`);
-    throw new Error(`RADAR ${res.status}: ${path}`);
+    throw new Error(`Silo ${res.status}: ${path}`);
   }
   return res.json() as Promise<T>;
 }

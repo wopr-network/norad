@@ -20,19 +20,19 @@ export interface RadarState {
 
 async function fetchRadarState(): Promise<RadarState> {
   const [poolRes, workersRes, eventsRes, sourcesRes] = await Promise.allSettled([
-    fetch("/api/radar/pool/slots").then((r) => {
+    fetch("/api/defcon/pool/slots").then((r) => {
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return r.json() as Promise<SlotPool>;
     }),
-    fetch("/api/radar/workers").then((r) => {
+    fetch("/api/defcon/workers").then((r) => {
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return r.json() as Promise<Worker[]>;
     }),
-    fetch("/api/radar/events?limit=100").then((r) => {
+    fetch("/api/defcon/events?limit=100").then((r) => {
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return r.json() as Promise<EventLogEntry[]>;
     }),
-    fetch("/api/radar/sources").then((r) => {
+    fetch("/api/defcon/sources").then((r) => {
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return r.json() as Promise<Source[]>;
     }),
@@ -52,7 +52,7 @@ async function fetchRadarState(): Promise<RadarState> {
   if (sources.length > 0) {
     const watchResults = await Promise.allSettled(
       sources.map((s) =>
-        fetch(`/api/radar/sources/${encodeURIComponent(s.id)}/watches`).then((r) => {
+        fetch(`/api/defcon/sources/${encodeURIComponent(s.id)}/watches`).then((r) => {
           if (!r.ok) throw new Error(`HTTP ${r.status}`);
           return r.json() as Promise<Watch[]>;
         }),
