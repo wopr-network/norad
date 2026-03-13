@@ -1,61 +1,60 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ActivityItem } from "@/lib/radar-client";
 import { getEntityActivity } from "@/lib/radar-client";
 
 const POLL_INTERVAL_MS = 3000;
 const TERMINAL_STATES = new Set(["done", "failed", "cancelled"]);
 
-function rowLabel(type: ActivityItem["type"]): string {
-  switch (type) {
-    case "start":
-      return "▶ start";
-    case "tool_use":
-      return "⚙ tool";
-    case "text":
-      return "✎ text";
-    case "result":
-      return "✓ result";
-  }
-}
+function ActivityRow({ item, attemptNumber }: { item: ActivityItem; attemptNumber: number }) {
+  const [expanded, setExpanded] = useState(false);
 
-function rowColor(type: ActivityItem["type"]): string {
-  switch (type) {
-    case "start":
-      return "var(--accent-blue)";
-    case "tool_use":
-      return "var(--accent-orange, var(--muted-foreground))";
-    case "text":
-      return "var(--foreground)";
-    case "result":
-      return "var(--accent-green)";
-  }
-}
-
-function ActivityRow({ item }: { item: ActivityItem }) {
-  const [expanded, setExpanded] = useState(item.type === "tool_use");
-
+  let label: string;
+  let labelColor: string;
   let summary: string;
   let detail: string | null = null;
 
-  if (item.type === "tool_use") {
-    const name = item.data.name as string | undefined;
+  if (item.type === "start") {
+    label = "▶";
+    labelColor = "var(--accent-blue)";
+    summary = `began attempt ${attemptNumber}`;
+  } else if (item.type === "tool_use") {
+    label = "⚙";
+    labelColor = "var(--accent-orange, var(--muted-foreground))";
+    const name = (item.data.name as string | undefined) ?? "unknown";
     const input = item.data.input as Record<string, unknown> | undefined;
-    summary = name ?? "unknown";
-    if (input && Object.keys(input).length > 0) {
+    const truncated = input ? JSON.stringify(input).slice(0, 120) : "";
+    summary = truncated
+      ? `${name} — ${truncated}${JSON.stringify(input).length > 120 ? "…" : ""}`
+      : name;
+    if (input && JSON.stringify(input, null, 2).length > 120) {
       detail = JSON.stringify(input, null, 2);
     }
   } else if (item.type === "text") {
+    label = "✎";
+    labelColor = "var(--foreground)";
     const text = (item.data.text as string | undefined) ?? "";
-    summary = text.slice(0, 120) + (text.length > 120 ? "…" : "");
-    if (text.length > 120) detail = text;
-  } else if (item.type === "result") {
-    const subtype = item.data.subtype as string | undefined;
-    const cost = item.data.cost_usd as number | undefined;
-    summary = [subtype, cost != null ? `$${cost.toFixed(4)}` : null].filter(Boolean).join(" · ");
+    const lines = text.split("\n");
+    if (lines.length > 3) {
+      summary = `${lines.slice(0, 3).join(" ").slice(0, 120)}…`;
+      detail = text;
+    } else {
+      summary = text;
+    }
   } else {
-    summary = `slot ${item.slotId}`;
+    // result
+    const signal = item.data.signal as string | undefined;
+    const error = item.data.error as string | undefined;
+    if (error) {
+      label = "✗";
+      labelColor = "var(--accent-red, #ef4444)";
+      summary = error;
+    } else {
+      label = "✓";
+      labelColor = "var(--accent-green)";
+      summary = signal ? `signal: ${signal}` : "completed";
+    }
   }
 
   const hasDetail = detail !== null;
@@ -66,8 +65,8 @@ function ActivityRow({ item }: { item: ActivityItem }) {
       style={{ borderColor: "var(--border)" }}
     >
       <div className="flex gap-3 text-xs">
-        <span className="w-14 flex-shrink-0 font-mono" style={{ color: rowColor(item.type) }}>
-          {rowLabel(item.type)}
+        <span className="w-6 flex-shrink-0 font-mono" style={{ color: labelColor }}>
+          {label}
         </span>
         <button
           type="button"
@@ -92,7 +91,7 @@ function ActivityRow({ item }: { item: ActivityItem }) {
       </div>
       {expanded && detail && (
         <pre
-          className="text-xs ml-[4.25rem] p-2 rounded overflow-x-auto"
+          className="text-xs ml-9 p-2 rounded overflow-x-auto"
           style={{
             color: "var(--foreground)",
             background: "var(--muted)",
@@ -162,6 +161,17 @@ export function ActivityFeed({ entityId, entityState }: ActivityFeedProps) {
     };
   }, [entityId, entityState]);
 
+  // Group items by slotId, preserving insertion order
+  const groups = useMemo(() => {
+    const map = new Map<string, ActivityItem[]>();
+    for (const item of items) {
+      const key = item.slotId;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)?.push(item);
+    }
+    return Array.from(map.entries());
+  }, [items]);
+
   if (items.length === 0) {
     return (
       <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>
@@ -195,8 +205,27 @@ export function ActivityFeed({ entityId, entityState }: ActivityFeedProps) {
         </button>
       </div>
       <div className="flex flex-col">
-        {items.map((item) => (
-          <ActivityRow key={item.id} item={item} />
+        {groups.map(([slotId, slotItems], groupIdx) => (
+          <div key={slotId} className="flex flex-col">
+            {/* Attempt divider */}
+            <div
+              className="flex items-center gap-2 py-2"
+              style={{ borderTop: groupIdx > 0 ? "1px solid var(--border)" : undefined }}
+            >
+              <span
+                className="text-xs font-bold tracking-wider uppercase"
+                style={{ color: "var(--muted-foreground)" }}
+              >
+                Attempt {groupIdx + 1}
+              </span>
+              <span className="text-xs font-mono" style={{ color: "var(--muted-foreground)" }}>
+                {slotId}
+              </span>
+            </div>
+            {slotItems.map((item) => (
+              <ActivityRow key={item.id} item={item} attemptNumber={groupIdx + 1} />
+            ))}
+          </div>
         ))}
         <div ref={bottomRef} />
       </div>
