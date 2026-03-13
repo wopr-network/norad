@@ -24,11 +24,10 @@ function ActivityRow({ item, attemptNumber }: { item: ActivityItem; attemptNumbe
     labelColor = "var(--accent-orange, var(--muted-foreground))";
     const name = (item.data.name as string | undefined) ?? "unknown";
     const input = item.data.input as Record<string, unknown> | undefined;
-    const truncated = input ? JSON.stringify(input).slice(0, 120) : "";
-    summary = truncated
-      ? `${name} — ${truncated}${JSON.stringify(input).length > 120 ? "…" : ""}`
-      : name;
-    if (input && JSON.stringify(input, null, 2).length > 120) {
+    const compact = input ? JSON.stringify(input) : "";
+    const truncated = compact.slice(0, 120);
+    summary = truncated ? `${name} — ${truncated}${compact.length > 120 ? "…" : ""}` : name;
+    if (input && compact.length > 120) {
       detail = JSON.stringify(input, null, 2);
     }
   } else if (item.type === "text") {
@@ -36,7 +35,7 @@ function ActivityRow({ item, attemptNumber }: { item: ActivityItem; attemptNumbe
     labelColor = "var(--foreground)";
     const text = (item.data.text as string | undefined) ?? "";
     const lines = text.split("\n");
-    if (lines.length > 3) {
+    if (lines.length > 3 || text.length > 500) {
       summary = `${lines.slice(0, 3).join(" ").slice(0, 120)}…`;
       detail = text;
     } else {

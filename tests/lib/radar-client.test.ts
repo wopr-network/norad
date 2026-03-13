@@ -26,35 +26,35 @@ describe("getEntityActivity", () => {
       ],
       nextSeq: 2,
     };
-    globalThis.fetch = vi.fn().mockResolvedValue({
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true,
       json: () => Promise.resolve(mockPage),
-    });
+    } as Response);
 
     const result = await getEntityActivity("e1");
     expect(result).toEqual(mockPage);
 
-    const [url] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url] = fetchSpy.mock.calls[0];
     expect(url).toBe("http://test-radar/api/entities/e1/activity?since=0");
   });
 
   it("passes since parameter", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ items: [], nextSeq: 5 }),
-    });
+    } as Response);
 
     await getEntityActivity("e1", 5);
 
-    const [url] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url] = fetchSpy.mock.calls[0];
     expect(url).toBe("http://test-radar/api/entities/e1/activity?since=5");
   });
 
   it("throws on non-ok response", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: false,
       status: 500,
-    });
+    } as Response);
 
     await expect(getEntityActivity("e1")).rejects.toThrow("RADAR 500");
   });
