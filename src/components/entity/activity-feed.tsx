@@ -35,8 +35,8 @@ function ActivityRow({ item, attemptNumber }: { item: ActivityItem; attemptNumbe
     labelColor = "var(--foreground)";
     const text = (item.data.text as string | undefined) ?? "";
     const lines = text.split("\n");
-    if (lines.length > 3 || text.length > 500) {
-      summary = `${lines.slice(0, 3).join(" ").slice(0, 120)}…`;
+    if (text.length > 100) {
+      summary = `${lines[0].slice(0, 120)}${text.length > 120 ? "…" : ""}`;
       detail = text;
     } else {
       summary = text;
